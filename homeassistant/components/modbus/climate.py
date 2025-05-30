@@ -1,6 +1,6 @@
 """Support for Generic Modbus Thermostats."""
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import logging
 import struct
@@ -32,6 +32,8 @@ from homeassistant.const import (
     CONF_ADDRESS,
     CONF_NAME,
     CONF_TEMPERATURE_UNIT,
+    CONF_OFFSET,
+    CONF_SCALE,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
     STATE_UNKNOWN,
@@ -44,6 +46,8 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import get_hub
 from .const import (
+    CONF_TARGET_TEMP_OFFSET,
+    CONF_TARGET_TEMP_SCALE,
     CALL_TYPE_COIL,
     CALL_TYPE_REGISTER_HOLDING,
     CALL_TYPE_WRITE_COIL,
@@ -154,6 +158,12 @@ class ModbusThermostat(BaseStructPlatform, RestoreEntity, ClimateEntity):
         self._target_temperature_write_registers = config[
             CONF_TARGET_TEMP_WRITE_REGISTERS
         ]
+        self._target_temperature_scale = (
+            config[CONF_TARGET_TEMP_SCALE] if config[CONF_TARGET_TEMP_SCALE] else config[CONF_SCALE]
+        )
+        self._target_temperature_offset = (
+            config[CONF_TARGET_TEMP_OFFSET] if config[CONF_TARGET_TEMP_OFFSET] else config[CONF_OFFSET]
+        )
         self._unit = config[CONF_TEMPERATURE_UNIT]
         self._attr_current_temperature = None
         self._attr_target_temperature = None
@@ -415,8 +425,8 @@ class ModbusThermostat(BaseStructPlatform, RestoreEntity, ClimateEntity):
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         target_temperature = (
-            float(kwargs[ATTR_TEMPERATURE]) - self._offset
-        ) / self._scale
+            float(kwargs[ATTR_TEMPERATURE]) - self._target_temperature_offset
+        ) / self._target_temperature_scale
         if self._data_type in (
             DataType.INT16,
             DataType.INT32,
